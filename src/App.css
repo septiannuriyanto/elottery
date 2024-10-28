@@ -1,0 +1,34 @@
+/* App.css or global CSS file */
+body, html {
+    background-color: transparent; /* or set to a color that fits your design */
+    margin: 0;
+    padding: 0;
+  }
+
+  
+  /* App.css */
+.header {
+    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out; /* Add transition */
+    opacity: 1; /* Default opacity for visible header */
+  }
+  
+  .header.hidden {
+    transform: translateY(-100%); /* Move the header out of view */
+    opacity: 0; /* Fade out the header */
+  }
+
+
+  /* App.css */
+
+.separator {
+    width: 1px; /* Width of the vertical separator */
+    background-color: #cbd5e1; /* Color of the separator */
+  }
+  
+  @media (max-width: 768px) {
+    .separator {
+      height: 1px; /* Height of the horizontal separator */
+      width: 100%; /* Full width for horizontal separator */
+    }
+  }
+  
