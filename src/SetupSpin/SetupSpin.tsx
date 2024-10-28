@@ -7,41 +7,40 @@ import { MdCached, MdDelete } from "react-icons/md";
 import { Prize } from "../types/Prize";
 import { Participant } from "../types/Participant";
 
-const generateDummyPrizes = (count: number): Prize[] => {
-  const dummyPrizes: Prize[] = [];
-  const prizeNames = [
-    "Gift Card",
-    "Bluetooth Speaker",
-    "Smartphone",
-    "Headphones",
-    "Laptop",
-    "Watch",
-    "Camera",
-    "Book",
-    "Backpack",
-    "Coffee Maker",
-    "Plant",
-    "Board Game",
-    "Puzzle",
-    "Video Game",
-    "Subscription Box",
-    "Smart Home Device",
-    "Kitchen Gadget",
-    "Travel Voucher",
-    "Fitness Tracker",
-    "E-Reader",
-    "Portable Charger",
-  ];
+// const generateDummyPrizes = (count: number): Prize[] => {
+//   const dummyPrizes: Prize[] = [];
+//   const prizeNames = [
+//     "Gift Card",
+//     "Bluetooth Speaker",
+//     "Smartphone",
+//     "Headphones",
+//     "Laptop",
+//     "Watch",
+//     "Camera",
+//     "Book",
+//     "Backpack",
+//     "Coffee Maker",
+//     "Plant",
+//     "Board Game",
+//     "Puzzle",
+//     "Video Game",
+//     "Subscription Box",
+//     "Smart Home Device",
+//     "Kitchen Gadget",
+//     "Travel Voucher",
+//     "Fitness Tracker",
+//     "E-Reader",
+//     "Portable Charger",
+//   ];
 
-  for (let i = 0; i < count; i++) {
-    const name = prizeNames[i % prizeNames.length];
-    const qty = Math.floor(Math.random() * 10) + 1; // Random quantity between 1 and 10
-    dummyPrizes.push({ name: name, qty: qty, rounded: false });
-  }
+//   for (let i = 0; i < count; i++) {
+//     const name = prizeNames[i % prizeNames.length];
+//     const qty = Math.floor(Math.random() * 10) + 1; // Random quantity between 1 and 10
+//     dummyPrizes.push({ name: name, qty: qty, rounded: false });
+//   }
 
-  return dummyPrizes;
-};
-
+//   return dummyPrizes;
+// };
 
 interface SetupSpinProps {
   scrollToSpinRef: React.RefObject<HTMLDivElement>;
@@ -49,18 +48,20 @@ interface SetupSpinProps {
   setParticipantsCallback: (newParticipants: Participant[]) => void;
 }
 
-
-const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallback, setParticipantsCallback }) => {
+const SetupSpin: React.FC<SetupSpinProps> = ({
+  scrollToSpinRef,
+  setPrizesCallback,
+  setParticipantsCallback,
+}) => {
   const handleScrollToSpin = () => {
-    scrollToSpinRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToSpinRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [notFound, setNotFound] = useState<boolean>(false);
   const [prizes, setPrizes] = useState<Prize[]>([]);
-  const [prizesToSpin, setPrizesToSpin] = useState<Prize[]>([]);
+  // const [prizesToSpin, setPrizesToSpin] = useState<Prize[]>([]);
   const [prizeName, setPrizeName] = useState<string>("");
   const [prizeQty, setPrizeQty] = useState<number>(0);
 
@@ -71,6 +72,19 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
       setPrizes(JSON.parse(storedPrizes)); // Parse and set the prizes state
     }
   }, []);
+
+  type ParticipantRow = [string, string, string];
+  interface PapaParseResult {
+    data: ParticipantRow[]; // Array of ParticipantRow tuples
+    meta: {
+      delimiter: string;
+      linebreak: string;
+      aborted: boolean;
+      truncated: boolean;
+      fields: string[]; // The headers if you have them
+      // Additional metadata can be included here
+    };
+  }
 
   const onDrop = (acceptedFiles: File[]) => {
     acceptedFiles.forEach((file) => {
@@ -83,9 +97,10 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
         ) {
           const workbook = XLSX.read(data, { type: "array" });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const json = XLSX.utils.sheet_to_json<Participant>(firstSheet, {
-            header: 1,
-          });
+          const json: ParticipantRow[] =
+            XLSX.utils.sheet_to_json<ParticipantRow>(firstSheet, {
+              header: 1,
+            });
           const participantsData = json.slice(1).map((row) => ({
             id: row[0],
             name: row[1],
@@ -95,10 +110,10 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
           setParticipantsCallback(participantsData);
         } else if (file.type === "text/csv") {
           Papa.parse(file, {
-            complete: (results) => {
+            complete: (results: PapaParseResult) => {
               const participantsData = results.data
                 .slice(1)
-                .map((row: any[]) => ({
+                .map((row: ParticipantRow) => ({
                   id: row[0],
                   name: row[1],
                   group: row[2],
@@ -154,7 +169,10 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full py-2 pl-10 pr-10 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+          <FiSearch/>
+          </span>
+          
           {searchQuery && (
             <button
               type="button"
@@ -210,7 +228,7 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
 
   const spinUpRef = useRef<HTMLDivElement | null>(null);
 
-  const handleSpin = (prize: Prize) => {
+  const handleSpin = () => {
     // Logic to spin or select this prize
     if (participants.length <= 0) {
       alert("Tabel peserta belum diinput");
@@ -222,72 +240,69 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
   const handleDeletePrize = (index: number) => {
     setPrizes((prevPrizes) => {
       const updatedPrizes = prevPrizes.filter((_, i) => i !== index);
-  
+
       // Update the local storage with the updated list
       localStorage.setItem("prizes", JSON.stringify(updatedPrizes));
-  
+
       return updatedPrizes;
     });
   };
-  
 
   const addPrize = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-  
+
     if (!prizeName || prizeName.trim() === "" || prizeQty <= 0) {
       return;
     }
-  
+
     setPrizes((prevPrizes) => {
       const updatedPrizes = [
         ...prevPrizes,
         { name: prizeName, qty: prizeQty, rounded: false },
       ];
-  
+
       // Save the updated prizes to local storage
       localStorage.setItem("prizes", JSON.stringify(updatedPrizes));
-  
+
       return updatedPrizes;
     });
-  
+
     // Reset the input fields
     setPrizeName("");
     setPrizeQty(0);
   };
-  
 
   const toggleRounded = (index: number) => {
     setPrizes((prevList) => {
       const updatedList = prevList.map((prize, idx) =>
         idx === index ? { ...prize, rounded: !prize.rounded } : prize
       );
-  
+
       // Save the updated list to local storage
-      localStorage.setItem('prizes', JSON.stringify(updatedList));
-  
+      localStorage.setItem("prizes", JSON.stringify(updatedList));
+
       return updatedList;
     });
   };
-  
 
   const handleMarkAll = () => {
     const allRounded = prizes.every((prize) => prize.rounded); // Check if all are rounded
     // Toggle the 'rounded' property for all prizes
-  const updatedPrizes = prizes.map((prize) => ({
-    ...prize,
-    rounded: !allRounded,
-  }));
+    const updatedPrizes = prizes.map((prize) => ({
+      ...prize,
+      rounded: !allRounded,
+    }));
 
-  // Update the state
-  setPrizes(updatedPrizes);
+    // Update the state
+    setPrizes(updatedPrizes);
 
-  // Store the updated list in local storage
-  localStorage.setItem('prizes', JSON.stringify(updatedPrizes));
+    // Store the updated list in local storage
+    localStorage.setItem("prizes", JSON.stringify(updatedPrizes));
   };
 
   const handleClearAll = () => {
-    setPrizes([])
-    localStorage.removeItem('prizes');
+    setPrizes([]);
+    localStorage.removeItem("prizes");
   };
 
   const handleBatchSpin = () => {
@@ -300,14 +315,10 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
     // setPrizesToSpin([]);
     const prizesSpin = prizes.filter((prize) => prize.rounded);
     console.log(prizesSpin);
-    
 
     if (prizesSpin.length > 0) {
       // Implement your batch spin logic here
       console.log("Batch spinning:", prizesSpin);
-
-      // Example: clear the rounded property for spun prizes
-      setPrizesToSpin(prizesSpin);
 
       setPrizesCallback(prizesSpin);
       // console.log(prizesToSpin);
@@ -392,10 +403,7 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
 
               {/* Prize Display Table */}
               <div className="mt-2 flex flex-col h-[calc(100vh-200px)]">
-                <div className="table__menus flex flex-row justify-between">
-                 
-                  
-                </div>
+                <div className="table__menus flex flex-row justify-between"></div>
                 <div className="overflow-y-auto flex-grow ">
                   <table className="w-full h-1/4">
                     <thead className="bg-gray-200">
@@ -431,12 +439,14 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleSpin(prize);
+                                handleSpin();
                               }} // Prevent row click event
                               className="mr-2 p-2 bg-blue-400 text-white rounded hover:bg-blue-500"
                               aria-label="Spin"
                             >
-                              <MdCached className="w-5 h-5" />
+                              <span className="w-5 h-5">
+                                <MdCached />
+                              </span>
                             </button>
                             {/* Delete icon button */}
                             <button
@@ -447,7 +457,9 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
                               className="p-2 bg-red-400 text-white rounded hover:bg-red-500"
                               aria-label="Delete"
                             >
-                              <MdDelete className="w-5 h-5" />
+                              <span className="w-5 h-5">
+                                <MdDelete />
+                              </span>
                             </button>
                           </td>
                         </tr>
@@ -456,7 +468,7 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
                   </table>
                 </div>
                 <div className="buttons flex flex-row items-center gap-2 justify-end mt-2">
-                <button
+                  <button
                     onClick={handleMarkAll}
                     className=" bg-green-300 rounded-lg text-white py-2 px-4 w-full"
                   >
@@ -468,24 +480,23 @@ const SetupSpin: React.FC<SetupSpinProps> = ({ scrollToSpinRef, setPrizesCallbac
                   >
                     Hapus Semua
                   </button>
-                <button
-                  onClick={handleBatchSpin}
-                  className={` w-full text-white rounded-lg py-2 px-4 ${
-                    isBatchSpinEnabled
-                      ? "bg-blue-700"
-                      : "bg-gray-400 cursor-not-allowed"
-                  }`}
-                  disabled={!isBatchSpinEnabled} // Disable button if no rounded prize
-                >
-                  Batch Spin
-                </button>
+                  <button
+                    onClick={handleBatchSpin}
+                    className={` w-full text-white rounded-lg py-2 px-4 ${
+                      isBatchSpinEnabled
+                        ? "bg-blue-700"
+                        : "bg-gray-400 cursor-not-allowed"
+                    }`}
+                    disabled={!isBatchSpinEnabled} // Disable button if no rounded prize
+                  >
+                    Batch Spin
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
     </div>
   );
 };
