@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import * as XLSX from "xlsx";
-import Papa from "papaparse";
+import Papa, { ParseResult } from "papaparse";
 import { FiSearch, FiX } from "react-icons/fi";
 import { MdCached, MdDelete } from "react-icons/md";
 import { Prize } from "../types/Prize";
@@ -74,17 +74,17 @@ const SetupSpin: React.FC<SetupSpinProps> = ({
   }, []);
 
   type ParticipantRow = [string, string, string];
-  interface PapaParseResult {
-    data: ParticipantRow[]; // Array of ParticipantRow tuples
-    meta: {
-      delimiter: string;
-      linebreak: string;
-      aborted: boolean;
-      truncated: boolean;
-      fields: string[]; // The headers if you have them
-      // Additional metadata can be included here
-    };
-  }
+  // interface PapaParseResult {
+  //   data: ParticipantRow[]; // Array of ParticipantRow tuples
+  //   meta: {
+  //     delimiter: string;
+  //     linebreak: string;
+  //     aborted: boolean;
+  //     truncated: boolean;
+  //     fields: string[]; // The headers if you have them
+  //     // Additional metadata can be included here
+  //   };
+  // }
 
   const onDrop = (acceptedFiles: File[]) => {
     acceptedFiles.forEach((file) => {
@@ -109,11 +109,11 @@ const SetupSpin: React.FC<SetupSpinProps> = ({
           setParticipants(participantsData);
           setParticipantsCallback(participantsData);
         } else if (file.type === "text/csv") {
-          Papa.parse(file, {
-            complete: (results: PapaParseResult) => {
+          Papa.parse<ParticipantRow>(file, {
+            complete: (results: ParseResult<ParticipantRow>) => {
               const participantsData = results.data
                 .slice(1)
-                .map((row: ParticipantRow) => ({
+                .map((row) => ({
                   id: row[0],
                   name: row[1],
                   group: row[2],
