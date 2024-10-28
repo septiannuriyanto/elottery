@@ -27,7 +27,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
   const [spinning, setSpinning] = useState<boolean>(false); // Track number of spins
 
   // Calculate the total number of spins needed (total quantity of prizes)
-  const totalSpins = mutablePrizes.reduce((acc, prize) => acc + prize.qty, 0);
+  // const totalSpins = mutablePrizes.reduce((acc, prize) => acc + prize.qty, 0);
   // setSpinCount(totalSpins)
 
   const handleChangeSpinRate = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,10 +116,10 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
     //=====================================================================================================================
     const spinRound = duration / spinRate;
     let availablePrizes = mutablePrizes.filter((prize) => prize.qty > 0);
-    const totalSpins = availablePrizes.reduce(
-      (acc, prize) => acc + prize.qty,
-      0
-    );
+    // const totalSpins = availablePrizes.reduce(
+    //   (acc, prize) => acc + prize.qty,
+    //   0
+    // );
 
     let updatedPrizes = [...mutablePrizes];
     while (availablePrizes.length > 0) {
