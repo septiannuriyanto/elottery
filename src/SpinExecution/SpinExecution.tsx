@@ -30,6 +30,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
   // const [spinCount, setSpinCount] = useState<number>(0); // Track number of spins
   const [spinning, setSpinning] = useState<boolean>(false); // Track number of spins
   const newTab = useRef<Window | null>(null);
+  const [progress, setProgress] = useState<number>(0); // New state for remaining quantity
 
   // Calculate the total number of spins needed (total quantity of prizes)
   // const totalSpins = mutablePrizes.reduce((acc, prize) => acc + prize.qty, 0);
@@ -58,26 +59,37 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
         0
       );
 
+      const totalParticipants = mutableParticipants.length;
+      const endTime = Date.now() + duration;
+      const spins = totalSpins > totalParticipants ? totalParticipants : totalSpins;
+
+      console.log(totalSpins);
+      console.log(totalParticipants);
+      console.log(spins);
+      
+
       if (spinning) return;
 
       console.log("Spinning...");
       setSpinning(true); // Set spinning status
-      const totalParticipants = mutableParticipants.length;
-      const endTime = Date.now() + duration;
 
-      for (let spinCount = 0; spinCount < totalSpins; spinCount++) {
-        // Check if the duration has ended
-        if (Date.now() >= endTime) {
-          // Break out of the loop if the duration is over
-          break;
+      try {
+        for (let spinCount = 0; spinCount < spins-1; spinCount++) {
+          // Check if the duration has ended
+          if (Date.now() >= endTime) {
+            // Break out of the loop if the duration is over
+            break;
+          }
+  
+          // Spin logic
+          const currentIndex = spinCount % spins; // Cycle through participants
+          setDisplayedParticipant(mutableParticipants[currentIndex]);
+  
+          // Wait for the spinRate duration before the next update
+          await new Promise((resolve) => setTimeout(resolve, spinRate));
         }
-
-        // Spin logic
-        const currentIndex = spinCount % totalParticipants; // Cycle through participants
-        setDisplayedParticipant(mutableParticipants[currentIndex]);
-
-        // Wait for the spinRate duration before the next update
-        await new Promise((resolve) => setTimeout(resolve, spinRate));
+      } catch (error) {
+        console.error(error)
       }
 
       // After the spinning duration, select a prize and a winner
@@ -121,13 +133,23 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
     //=====================================================================================================================
     const spinRound = duration / spinRate;
     let availablePrizes = mutablePrizes.filter((prize) => prize.qty > 0);
-    // const totalSpins = availablePrizes.reduce(
-    //   (acc, prize) => acc + prize.qty,
-    //   0
-    // );
+    const totalSpins = availablePrizes.reduce(
+      (acc, prize) => acc + prize.qty,
+      0
+    );
 
     let updatedPrizes = [...mutablePrizes];
-    while (availablePrizes.length > 0) {
+
+    console.log(totalSpins);
+    console.log(participants.length);
+    let spins = totalSpins > participants.length ? participants.length : totalSpins;
+    const maxspins = spins;
+    console.log(maxspins);
+    
+    console.log(spins);
+    
+
+    while (spins > 0) {
       // Pick a random prize from the available prizes
       const prizeIndex = Math.floor(Math.random() * availablePrizes.length);
       const prizeWon = availablePrizes[prizeIndex];
@@ -151,7 +173,6 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
 
       // Spin Winner Pick
       const winner = mutableParticipants[winnerIndex];
-      console.log(winner);
 
       // Delete The Winner in the Participant List to Prevent Duplicate Spins
       mutableParticipants.splice(winnerIndex, 1); // Remove winner from the list directly
@@ -176,6 +197,13 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       setMutablePrizes(updatedPrizes);
       // Wait for the state to update
       await new Promise((resolve) => setTimeout(resolve, 100));
+      spins--;
+      console.log(`Max Spins : ${maxspins}, Spin : ${spins}`);
+      
+      const newProgress = (Math.abs(spins-maxspins-1)/maxspins)*100;
+      console.log(newProgress);
+      
+      setProgress(newProgress)
     }
 
     return;
@@ -359,7 +387,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       </div>
 
       <div className="progressBar py-10 px-10">
-      <ProgressBar mutablePrizes={mutablePrizes}/>
+      <ProgressBar progress={progress}/>
       </div>
 
       <div

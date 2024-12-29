@@ -15,7 +15,7 @@ const ExportPage: React.FC<{ data: WinnerData[] }> = ({ data }) => {
               <style>
                 /* Hide page header and footer */
                 @page {
-                  margin: 0; /* Removes the default margin, which includes headers and footers */
+                  margin: 2cm; /* Removes the default margin, which includes headers and footers */
                 }
                 body {
                   margin: 1cm; /* Add custom margin to your content */
@@ -36,6 +36,11 @@ const ExportPage: React.FC<{ data: WinnerData[] }> = ({ data }) => {
                 th {
                   background-color: #e2e8f0;
                   font-size: 11px;
+                }
+                #judul{
+                  margin: auto;
+                  align-items: center;
+                  justify-content: center;
                 }
               </style>
             </head>
@@ -65,9 +70,11 @@ const ExportPage: React.FC<{ data: WinnerData[] }> = ({ data }) => {
         </button>
       </div>
       <div ref={printRef}>
+        <h2 id='judul'>DAFTAR PEMENANG DOORPRIZE FAMGATH 2025 PAMA BRCG</h2>
         <table className="mt-4 border-collapse border border-gray-300 w-full">
           <thead className="bg-slate-300">
             <tr>
+            <th className="border border-gray-300 px-4 py-2">No</th>
               <th className="border border-gray-300 px-4 py-2">Name</th>
               <th className="border border-gray-300 px-4 py-2">ID</th>
               <th className="border border-gray-300 px-4 py-2">Group</th>
@@ -77,6 +84,7 @@ const ExportPage: React.FC<{ data: WinnerData[] }> = ({ data }) => {
           <tbody>
             {data.map((winner, index) => (
               <tr key={index}>
+                <td className="border border-gray-300 px-4 py-2">{index + 1}</td>
                 <td className="border border-gray-300 px-4 py-2">{winner.participant.name}</td>
                 <td className="border border-gray-300 px-4 py-2">{winner.participant.id}</td>
                 <td className="border border-gray-300 px-4 py-2">{winner.participant.group}</td>
