@@ -3,6 +3,10 @@ import { Prize } from "../types/Prize";
 import { Participant } from "../types/Participant";
 import { WinnerData } from "../types/winnerdata"; // Assuming this is the path for WinnerData
 import { FiDownload, FiTrash2 } from "react-icons/fi";
+import { useRef } from "react";
+import { createRoot } from "react-dom/client";
+import ExportPage from "../ExportPage/ExportPage";
+import ProgressBar from "../components/ProgresssBar";
 
 interface SpinExecutionProps {
   prizes: Prize[]; // Define the prop type
@@ -25,6 +29,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
   const [remainingQty, setRemainingQty] = useState<number>(0); // New state for remaining quantity
   // const [spinCount, setSpinCount] = useState<number>(0); // Track number of spins
   const [spinning, setSpinning] = useState<boolean>(false); // Track number of spins
+  const newTab = useRef<Window | null>(null);
 
   // Calculate the total number of spins needed (total quantity of prizes)
   // const totalSpins = mutablePrizes.reduce((acc, prize) => acc + prize.qty, 0);
@@ -94,7 +99,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       setDisplayedParticipant(winner);
       setWinners((prevWinners) => [
         ...prevWinners,
-        { participant: winner, prize: prize.name },
+        { participant: winner, prize: prize },
       ]);
 
       // Decrement the quantity of the current prize
@@ -155,7 +160,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       addWinner(winner, prizeWon);
 
       // Wait before the next round
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       //===============================================================================================================
 
@@ -170,7 +175,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       // Finally, set the updated prizes back to state once the loop is done
       setMutablePrizes(updatedPrizes);
       // Wait for the state to update
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     return;
@@ -183,7 +188,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
     setWinners((prevWinners) => {
       const updatedWinners = [
         ...prevWinners,
-        { participant: winner, prize: prizeWon.name },
+        { participant: winner, prize: prizeWon },
       ];
 
       // Update localStorage with the new winners list
@@ -191,6 +196,48 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       return updatedWinners;
     });
   };
+
+
+  
+
+  const openInNewTab = () => {
+    // Open a new tab
+    newTab.current = window.open("", "_blank");
+  
+    if (newTab.current) {
+      // Create a placeholder for React to render
+      newTab.current.document.body.innerHTML = "<div id='new-tab-root'></div>";
+  
+      // Inject Tailwind CSS into the new tab
+      const tailwindLink = document.createElement("link");
+      tailwindLink.rel = "stylesheet";
+      tailwindLink.href = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
+      newTab.current.document.head.appendChild(tailwindLink);
+  
+   // Sort the winners data
+   const sortedWinners = winners.sort((a, b) => {
+    const prizeComparison = a.prize.prizeNumber - b.prize.prizeNumber;
+    if (prizeComparison !== 0) return prizeComparison;
+    return a.participant.name.localeCompare(b.participant.name);
+  });
+  
+  
+
+  
+      // Render the React component in the new tab
+      createRoot(newTab.current.document.getElementById("new-tab-root") as HTMLElement).render(
+        <ExportPage data={sortedWinners} />
+      );
+    }
+  };
+  
+
+  // const closeNewTab = () => {
+  //   if (newTab.current) {
+  //     newTab.current.close();
+  //     newTab.current = null;
+  //   }
+  // };
 
   //=====================================================================================================================
 
@@ -203,15 +250,41 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
     }
   }, [prizes]);
 
+  // const handleExportWinners = () => {
+  //   if (winners.length == 0) return;
+  //   const userInput = prompt("Ketik EXPORT untuk mengunduh daftar pemenang");
+  //   if (userInput === "EXPORT") {
+  //     // Export the winners
+
+  //   } else {
+  //     alert("Perintah salah, silahkan diulangi kembali");
+  //   }
+  // };
+
   const handleExportWinners = () => {
-    if (winners.length == 0) return;
+    if (winners.length === 0) return;
     const userInput = prompt("Ketik EXPORT untuk mengunduh daftar pemenang");
     if (userInput === "EXPORT") {
-      // Export the winners
+      //export the winners
+      openInNewTab();
+      return;
+      const csvContent = winners
+        .map((winner, index) => `${index + 1},${winner.participant.name},${winner.prize}`)
+        .join("\n");
+      const blob = new Blob([`No,Name,Prize\n${csvContent}`], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "winners.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } else {
       alert("Perintah salah, silahkan diulangi kembali");
     }
   };
+
+  
   const handleClearWinners = () => {
     if (winners.length == 0) return;
     const userInput = prompt(
@@ -234,7 +307,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       <div className="title flex items-center justify-center">
         <h1 className="my-10 text-2xl">Undian Langsung</h1>
       </div>
-      <div className="px-4 mx-2 min-h-[250px] md:h-[250px] md:grid grid-cols-1 md:grid-cols-3 gap-2 items-stretch justify-center border border-solid rounded-lg block">
+      <div className="mainPanel px-4 mx-2 min-h-[250px] md:h-[250px] md:grid grid-cols-1 md:grid-cols-3 gap-2 items-stretch justify-center border border-solid rounded-lg block">
         <div className="setting w-full h-full bg-red-300 p-4 md:flex items-center justify-center flex-col gap-2 ">
           <div className="spinrate__input w-full">
             <label htmlFor="spin__rate" className="mb-2">
@@ -285,6 +358,10 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
         </div>
       </div>
 
+      <div className="progressBar py-10 px-10">
+      <ProgressBar mutablePrizes={mutablePrizes}/>
+      </div>
+
       <div
         className="w-screen bg-slate-200 flex flex-col md:flex-row mt-10"
         style={{ height: "calc(100vh - 100px)" }}
@@ -302,7 +379,6 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
                   >
                     <thead className="w-full bg-slate-400">
                       <tr>
-                        <th className="border px-4 py-2 w-1/4">No</th>
                         <th className="border px-4 py-2 w-1/2">Nama Hadiah</th>
                         <th className="border px-4 py-2 w-1/4">Qty</th>
                       </tr>
@@ -316,7 +392,6 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
                               prize.rounded ? "bg-green-200" : ""
                             }`} // Apply row colors
                           >
-                            <td className="border px-4 py-1">{index + 1}</td>
                             <td className="border px-4 py-1">{prize.name}</td>
                             <td className="border px-4 py-1">{prize.qty}</td>
                           </tr>
@@ -362,54 +437,55 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
               <div className="flex flex-col h-[calc(100vh-200px)]">
                 <div className="table__menus flex flex-row justify-between"></div>
                 <div className="overflow-y-auto mt-2 w-full items-center">
-                  <table
-                    className="table-fixed"
-                    style={{ width: "calc(100% - 24px)" }}
-                  >
-                    <thead className="w-full bg-slate-400">
-                      <tr>
-                        <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-10">
-                          No
-                        </th>
-                        <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-3/6">
-                          Peserta
-                        </th>
-                        <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/6">
-                          Group
-                        </th>
-                        <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-2/6">
-                          Hadiah
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {winners.length > 0 ? (
-                        [...winners].reverse().map((winner, index) => (
-                          <tr
-                            key={index}
-                            className={`border hover:bg-gray-200 ${
-                              index % 2 === 0 ? "bg-slate-100" : "bg-slate-300"
-                            }`} // Alternate row colors
-                          >
-                            <td className="border px-4 py-1">{index + 1}</td>
-                            <td className="border px-4 py-1">
-                              {winner.participant.name}
-                            </td>
-                            <td className="border px-4 py-1">
-                              {winner.participant.group}
-                            </td>
-                            <td className="border px-4 py-1">{winner.prize}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="border text-center py-2">
-                            No winners yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                <table
+  className="table-fixed border-collapse"
+  style={{ width: "calc(100% - 24px)" }}
+>
+  <thead className="bg-slate-400">
+    <tr>
+      <th className="border sticky bg-slate-400 top-0 px-1 py-2 w-6">
+        No
+      </th>
+      <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/6">
+        ID
+      </th>
+      <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/4">
+        Nama
+      </th>
+      <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/6">
+        Group
+      </th>
+      <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/4">
+        Hadiah
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {winners.length > 0 ? (
+      [...winners].reverse().map((winner, index) => (
+        <tr
+          key={index}
+          className={`border hover:bg-gray-200 ${
+            index % 2 === 0 ? "bg-slate-100" : "bg-slate-300"
+          }`}
+        >
+          <td className="border px-1 py-1 text-center w-6">{index + 1}</td>
+          <td className="border px-4 py-1 w-1/6">{winner.participant.id}</td>
+          <td className="border px-4 py-1 w-1/4">{winner.participant.name}</td>
+          <td className="border px-4 py-1 w-1/6">{winner.participant.group}</td>
+          <td className="border px-4 py-1 w-1/4">{winner.prize.name}</td>
+        </tr>
+      ))
+    ) : (
+      <tr>
+        <td colSpan={5} className="border text-center py-2">
+          No winners yet.
+        </td>
+      </tr>
+    )}
+  </tbody>
+</table>
+
                 </div>
               </div>
             </div>

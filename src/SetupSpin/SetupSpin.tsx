@@ -202,6 +202,9 @@ const SetupSpin: React.FC<SetupSpinProps> = ({
                 <th className="border-b sticky top-0 z-10 px-2 py-2 bg-slate-400">
                   Group
                 </th>
+                <th className="border-b sticky top-0 z-10 px-2 py-2 bg-slate-400">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -210,6 +213,21 @@ const SetupSpin: React.FC<SetupSpinProps> = ({
                   <td className="border-b px-2 py-2">{participant.id}</td>
                   <td className="border-b px-4 py-2">{participant.name}</td>
                   <td className="border-b px-2 py-2">{participant.group}</td>
+                  <td className="border-b py-4 flex items-center justify-center">
+                            {/* Delete icon button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteParticipant(participant.id);
+                              }} // Prevent row click event
+                              className="p-2 bg-red-400 text-white rounded hover:bg-red-500"
+                              aria-label="Delete"
+                            >
+                              <span className="w-5 h-5">
+                                <MdDelete />
+                              </span>
+                            </button>
+                          </td>
                 </tr>
               ))}
             </tbody>
@@ -248,6 +266,19 @@ const SetupSpin: React.FC<SetupSpinProps> = ({
     });
   };
 
+  const handleDeleteParticipant = (id: string | number) => {
+
+    // Log deletion event for debugging
+    console.log(`Deleting participant with id: ${id}`);
+  
+    // Update the participants state and callback
+    setParticipants((prevParticipants) => {
+      const updatedParticipants = prevParticipants.filter((participant) => participant.id !== id);
+      setParticipantsCallback(updatedParticipants); // Update the parent callback
+      return updatedParticipants;
+    });
+  };
+
   const addPrize = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
 
@@ -258,7 +289,7 @@ const SetupSpin: React.FC<SetupSpinProps> = ({
     setPrizes((prevPrizes) => {
       const updatedPrizes = [
         ...prevPrizes,
-        { name: prizeName, qty: prizeQty, rounded: false },
+        { name: `${prizes.length+1}. ${prizeName}`, qty: prizeQty, prizeNumber: prizes.length+1, rounded: false },
       ];
 
       // Save the updated prizes to local storage
@@ -409,9 +440,6 @@ const SetupSpin: React.FC<SetupSpinProps> = ({
                     <thead className="bg-gray-200">
                       <tr>
                         <th className="border sticky top-0 z-10 bg-slate-400 px-4 py-2">
-                          No
-                        </th>
-                        <th className="border sticky top-0 z-10 bg-slate-400 px-4 py-2">
                           Nama Hadiah
                         </th>
                         <th className="border sticky top-0 z-10 bg-slate-400 px-4 py-2">
@@ -431,7 +459,6 @@ const SetupSpin: React.FC<SetupSpinProps> = ({
                             prize.rounded ? "bg-green-200" : ""
                           }`} // Apply row colors
                         >
-                          <td className="border px-4 py-1">{index + 1}</td>
                           <td className="border px-4 py-1">{prize.name}</td>
                           <td className="border px-4 py-1">{prize.qty}</td>
                           <td className="border px-4 py-1 flex items-center justify-center">
