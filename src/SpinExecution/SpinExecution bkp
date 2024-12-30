@@ -7,7 +7,7 @@ import { useRef } from "react";
 import { createRoot } from "react-dom/client";
 import ExportPage from "../ExportPage/ExportPage";
 import ProgressBar from "../components/ProgresssBar";
-import * as XLSX from "xlsx";
+import * as XLSX from 'xlsx';
 
 interface SpinExecutionProps {
   prizes: Prize[]; // Define the prop type
@@ -29,6 +29,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
   const [currentPrize, setCurrentPrize] = useState<Prize | null>(null); // New state for current prize
   const [remainingQty, setRemainingQty] = useState<number>(0); // New state for remaining quantity
   // const [spinCount, setSpinCount] = useState<number>(0); // Track number of spins
+  const [spinning, setSpinning] = useState<boolean>(false); // Track number of spins
   const newTab = useRef<Window | null>(null);
   const [progress, setProgress] = useState<number>(0); // New state for remaining quantity
 
@@ -48,89 +49,170 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
     setMutableParticipants(participants);
   }, [participants]);
 
+  const handleExecuteSpin = async () => {
+    const useLastConfig = false;
 
+    //=====================================================================================================================
+    if (useLastConfig) {
+      const availablePrizes = mutablePrizes.filter((prize) => prize.qty > 0);
+      const totalSpins = availablePrizes.reduce(
+        (acc, prize) => acc + prize.qty,
+        0
+      );
 
-      // Shuffle function for Participant arrays
-      const shuffleParticipants = (
-        participants: Participant[]
-      ): Participant[] => {
-        for (let i = participants.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [participants[i], participants[j]] = [participants[j], participants[i]];
-        }
-        return participants;
-      };
-  
-      // Shuffle function for Prize arrays
-      const shufflePrizes = (prizes: Prize[]): Prize[] => {
-        for (let i = prizes.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [prizes[i], prizes[j]] = [prizes[j], prizes[i]];
-        }
-        return prizes;
-      };
+      const totalParticipants = mutableParticipants.length;
+      const endTime = Date.now() + duration;
+      const spins = totalSpins > totalParticipants ? totalParticipants : totalSpins;
 
-
-      const handleExecuteSpin = async () => {
-        // Shuffle participants and prizes before spinning
-        let shuffledParticipants = shuffleParticipants([...mutableParticipants]);
-        let shuffledPrizes = shufflePrizes([...mutablePrizes]);
+      console.log(totalSpins);
+      console.log(totalParticipants);
+      console.log(spins);
       
-        const spinRound = duration / spinRate;
-        let availablePrizes = shuffledPrizes.filter((prize) => prize.qty > 0);
-        const totalSpins = availablePrizes.reduce((acc, prize) => acc + prize.qty, 0);
-        let spins = Math.min(totalSpins, shuffledParticipants.length);
-        const maxSpins = spins;
-      
-        while (spins > 0 && shuffledParticipants.length > 0) {
-          // Pick a random prize from the available prizes
-          const prizeIndex = Math.floor(Math.random() * availablePrizes.length);
-          const prizeWon = availablePrizes[prizeIndex];
-      
-          // Spin visualizations
-          let winnerIndex = 0;
-          for (let index = 0; index < spinRound; index++) {
-            winnerIndex = Math.floor(Math.random() * shuffledParticipants.length);
-            setDisplayedParticipant(shuffledParticipants[winnerIndex]);
-            await new Promise((resolve) => setTimeout(resolve, spinRate));
+
+      if (spinning) return;
+
+      console.log("Spinning...");
+      setSpinning(true); // Set spinning status
+
+      try {
+        for (let spinCount = 0; spinCount < spins-1; spinCount++) {
+          // Check if the duration has ended
+          if (Date.now() >= endTime) {
+            // Break out of the loop if the duration is over
+            break;
           }
-      
-          // Unveil the prize
-          setCurrentPrize(prizeWon);
-          setRemainingQty(prizeWon.qty - 1);
-      
-          // Pick the winner and remove from the pool
-          const winner = shuffledParticipants[winnerIndex];
-          shuffledParticipants = shuffledParticipants.filter(
-            (participant) => participant.id !== winner.id
-          );
-      
-          // Add to the winners list and save in localStorage
-          addWinner(winner, prizeWon);
-      
-          // Update prize quantity and available prizes
-          shuffledPrizes = shuffledPrizes.map((p) =>
-            p.name === prizeWon.name ? { ...p, qty: Math.max(p.qty - 1, 0) } : p
-          );
-          availablePrizes = shuffledPrizes.filter((prize) => prize.qty > 0);
-      
-          // Update progress
-          spins--;
-          const newProgress = ((maxSpins - spins) / maxSpins) * 100;
-          setProgress(newProgress);
-      
-          // Update mutable participants and prizes for next iteration
-          setMutableParticipants(shuffledParticipants);
-          setMutablePrizes(shuffledPrizes);
-      
-          await new Promise((resolve) => setTimeout(resolve, 100));
+  
+          // Spin logic
+          const currentIndex = spinCount % spins; // Cycle through participants
+          setDisplayedParticipant(mutableParticipants[currentIndex]);
+  
+          // Wait for the spinRate duration before the next update
+          await new Promise((resolve) => setTimeout(resolve, spinRate));
         }
-      
-        console.log("Spinning completed.");
-      };
-      
-      
+      } catch (error) {
+        console.error(error)
+      }
+
+      // After the spinning duration, select a prize and a winner
+      if (availablePrizes.length === 0) {
+        console.log("No prizes available to spin.");
+        setSpinning(false); // Reset spinning status
+        return;
+      }
+
+      const prizeIndex = Math.floor(Math.random() * availablePrizes.length);
+      const prize = availablePrizes[prizeIndex];
+      setCurrentPrize(prize); // Set the current prize
+      setRemainingQty(prize.qty); // Set the remaining quantity for the current prize
+
+      const finalIndex = Math.floor(Math.random() * totalParticipants);
+      const winner = mutableParticipants[finalIndex];
+
+      // Update displayed participant and add to winners
+      setDisplayedParticipant(winner);
+      setWinners((prevWinners) => [
+        ...prevWinners,
+        { participant: winner, prize: prize },
+      ]);
+
+      // Decrement the quantity of the current prize
+      setRemainingQty((prevQty) => (prevQty > 0 ? prevQty - 1 : 0));
+
+      // Optionally, update the mutable prizes if you want to reflect the remaining qty
+      setMutablePrizes((prevPrizes) =>
+        prevPrizes.map((p) =>
+          p.name === prize.name ? { ...p, qty: Math.max(p.qty - 1, 0) } : p
+        )
+      );
+
+      // End the spin process
+      console.log("Total spins completed. Spinning has stopped.");
+      setSpinning(false); // Reset spinning status
+      return;
+    }
+
+    //=====================================================================================================================
+    const spinRound = duration / spinRate;
+    let availablePrizes = mutablePrizes.filter((prize) => prize.qty > 0);
+    const totalSpins = availablePrizes.reduce(
+      (acc, prize) => acc + prize.qty,
+      0
+    );
+
+    let updatedPrizes = [...mutablePrizes];
+
+    console.log(totalSpins);
+    console.log(participants.length);
+    let spins = totalSpins > participants.length ? participants.length : totalSpins;
+    const maxspins = spins;
+    console.log(maxspins);
     
+    console.log(spins);
+    
+
+    while (spins > 0) {
+      // Pick a random prize from the available prizes
+      const prizeIndex = Math.floor(Math.random() * availablePrizes.length);
+      const prizeWon = availablePrizes[prizeIndex];
+
+      //Spin the participant
+      //===============================================================================================================
+      //Check the up to date participant length
+      // Spin Visualizations
+      let winnerIndex = 0;
+
+      for (let index = 0; index < spinRound; index++) {
+        winnerIndex = Math.floor(Math.random() * mutableParticipants.length);
+        setDisplayedParticipant(mutableParticipants[winnerIndex]);
+        //Show the prize box
+
+        await new Promise((resolve) => setTimeout(resolve, spinRate));
+      }
+      //Unveil the prize
+      setCurrentPrize(prizeWon);
+      setRemainingQty(prizeWon.qty - 1);
+
+      // Spin Winner Pick
+      const winner = mutableParticipants[winnerIndex];
+      
+      // Delete The Winner in the Participant List to Prevent Duplicate Spins
+      const removedWinner = mutableParticipants.filter(participant => participant.id !== winner.id); // Remove winner from the list directly
+      setMutableParticipants(removedWinner);
+
+      //Tambahkan ke list pemenang dan di local storage
+      addWinner(winner, prizeWon);
+
+      // Wait before the next round
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      //===============================================================================================================
+
+      // Synchronously update the quantity in the temporary array
+      updatedPrizes = updatedPrizes.map((p) =>
+        p.name === prizeWon.name ? { ...p, qty: Math.max(p.qty - 1, 0) } : p
+      );
+
+      // Update availablePrizes based on the latest prize quantities in updatedPrizes
+      availablePrizes = updatedPrizes.filter((prize) => prize.qty > 0);
+
+      // Finally, set the updated prizes back to state once the loop is done
+      setMutablePrizes(updatedPrizes);
+      // Wait for the state to update
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      spins--;
+      console.log(`Max Spins : ${maxspins}, Spin : ${spins}`);
+      
+      const newProgress = (Math.abs(spins-maxspins-1)/maxspins)*100;
+      console.log(newProgress);
+      
+      setProgress(newProgress)
+    }
+
+    return;
+    // for (let prizeIndex = 0; prizeIndex < totalSpins; prizeIndex++) {
+
+    // }
+  };
 
   const addWinner = (winner: Participant, prizeWon: Prize) => {
     setWinners((prevWinners) => {
@@ -145,34 +227,40 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
     });
   };
 
+
+  
+
   const openInNewTab = () => {
     // Open a new tab
     newTab.current = window.open("", "_blank");
-
+  
     if (newTab.current) {
       // Create a placeholder for React to render
       newTab.current.document.body.innerHTML = "<div id='new-tab-root'></div>";
-
+  
       // Inject Tailwind CSS into the new tab
       const tailwindLink = document.createElement("link");
       tailwindLink.rel = "stylesheet";
-      tailwindLink.href =
-        "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
+      tailwindLink.href = "https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css";
       newTab.current.document.head.appendChild(tailwindLink);
+  
+   // Sort the winners data
+   const sortedWinners = winners.sort((a, b) => {
+    const prizeComparison = a.prize.prizeNumber - b.prize.prizeNumber;
+    if (prizeComparison !== 0) return prizeComparison;
+    return a.participant.name.localeCompare(b.participant.name);
+  });
+  
+  
 
-      // Sort the winners data
-      const sortedWinners = winners.sort((a, b) => {
-        const prizeComparison = a.prize.prizeNumber - b.prize.prizeNumber;
-        if (prizeComparison !== 0) return prizeComparison;
-        return a.participant.name.localeCompare(b.participant.name);
-      });
-
+  
       // Render the React component in the new tab
-      createRoot(
-        newTab.current.document.getElementById("new-tab-root") as HTMLElement
-      ).render(<ExportPage data={sortedWinners} />);
+      createRoot(newTab.current.document.getElementById("new-tab-root") as HTMLElement).render(
+        <ExportPage data={sortedWinners} />
+      );
     }
   };
+  
 
   // const closeNewTab = () => {
   //   if (newTab.current) {
@@ -203,28 +291,29 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
   //   }
   // };
 
-  const handleExportExcel = () => {
-    if (winners.length === 0) return;
+const handleExportExcel = () => {
+  if (winners.length === 0) return;
 
-    // Prepare data for Excel
-    const data = winners.map((winner, index) => ({
-      No: index + 1,
-      Name: winner.participant.name,
-      Id: winner.participant.id,
-      Group: winner.participant.group,
-      Prize: winner.prize.name,
-    }));
+  // Prepare data for Excel
+  const data = winners.map((winner, index) => ({
+    "No": index + 1,
+    "Name": winner.participant.name,
+    "Id": winner.participant.id,
+    "Group": winner.participant.group,
+    "Prize": winner.prize.name,
+  }));
 
-    // Create a worksheet
-    const worksheet = XLSX.utils.json_to_sheet(data);
+  // Create a worksheet
+  const worksheet = XLSX.utils.json_to_sheet(data);
 
-    // Create a workbook
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Winners");
+  // Create a workbook
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Winners");
 
-    // Export the file
-    XLSX.writeFile(workbook, "winners.xlsx");
-  };
+  // Export the file
+  XLSX.writeFile(workbook, "winners.xlsx");
+};
+
 
   const handleExportWinners = () => {
     if (winners.length === 0) return;
@@ -234,14 +323,9 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       openInNewTab();
       return;
       const csvContent = winners
-        .map(
-          (winner, index) =>
-            `${index + 1},${winner.participant.name},${winner.prize}`
-        )
+        .map((winner, index) => `${index + 1},${winner.participant.name},${winner.prize}`)
         .join("\n");
-      const blob = new Blob([`No,Name,Prize\n${csvContent}`], {
-        type: "text/csv",
-      });
+      const blob = new Blob([`No,Name,Prize\n${csvContent}`], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -254,6 +338,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
     }
   };
 
+  
   const handleClearWinners = () => {
     if (winners.length == 0) return;
     const userInput = prompt(
@@ -328,7 +413,7 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
       </div>
 
       <div className="progressBar py-10 px-10">
-        <ProgressBar progress={progress} />
+      <ProgressBar progress={progress}/>
       </div>
 
       <div
@@ -413,64 +498,55 @@ const SpinExecution: React.FC<SpinExecutionProps> = ({
               <div className="flex flex-col h-[calc(100vh-200px)]">
                 <div className="table__menus flex flex-row justify-between"></div>
                 <div className="overflow-y-auto mt-2 w-full items-center">
-                  <table
-                    className="table-fixed border-collapse"
-                    style={{ width: "calc(100% - 24px)" }}
-                  >
-                    <thead className="bg-slate-400">
-                      <tr>
-                        <th className="border sticky bg-slate-400 top-0 px-1 py-2 w-6">
-                          No
-                        </th>
-                        <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/6">
-                          ID
-                        </th>
-                        <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/4">
-                          Nama
-                        </th>
-                        <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/6">
-                          Group
-                        </th>
-                        <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/4">
-                          Hadiah
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {winners.length > 0 ? (
-                        [...winners].reverse().map((winner, index) => (
-                          <tr
-                            key={index}
-                            className={`border hover:bg-gray-200 ${
-                              index % 2 === 0 ? "bg-slate-100" : "bg-slate-300"
-                            }`}
-                          >
-                            <td className="border px-1 py-1 text-center w-6">
-                              {index + 1}
-                            </td>
-                            <td className="border px-4 py-1 w-1/6">
-                              {winner.participant.id}
-                            </td>
-                            <td className="border px-4 py-1 w-1/4">
-                              {winner.participant.name}
-                            </td>
-                            <td className="border px-4 py-1 w-1/6">
-                              {winner.participant.group}
-                            </td>
-                            <td className="border px-4 py-1 w-1/4">
-                              {winner.prize.name}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={5} className="border text-center py-2">
-                            No winners yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                <table
+  className="table-fixed border-collapse"
+  style={{ width: "calc(100% - 24px)" }}
+>
+  <thead className="bg-slate-400">
+    <tr>
+      <th className="border sticky bg-slate-400 top-0 px-1 py-2 w-6">
+        No
+      </th>
+      <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/6">
+        ID
+      </th>
+      <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/4">
+        Nama
+      </th>
+      <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/6">
+        Group
+      </th>
+      <th className="border sticky bg-slate-400 top-0 px-4 py-2 w-1/4">
+        Hadiah
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {winners.length > 0 ? (
+      [...winners].reverse().map((winner, index) => (
+        <tr
+          key={index}
+          className={`border hover:bg-gray-200 ${
+            index % 2 === 0 ? "bg-slate-100" : "bg-slate-300"
+          }`}
+        >
+          <td className="border px-1 py-1 text-center w-6">{index + 1}</td>
+          <td className="border px-4 py-1 w-1/6">{winner.participant.id}</td>
+          <td className="border px-4 py-1 w-1/4">{winner.participant.name}</td>
+          <td className="border px-4 py-1 w-1/6">{winner.participant.group}</td>
+          <td className="border px-4 py-1 w-1/4">{winner.prize.name}</td>
+        </tr>
+      ))
+    ) : (
+      <tr>
+        <td colSpan={5} className="border text-center py-2">
+          No winners yet.
+        </td>
+      </tr>
+    )}
+  </tbody>
+</table>
+
                 </div>
               </div>
             </div>
